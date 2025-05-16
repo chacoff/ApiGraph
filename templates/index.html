@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pile Data Visualization</title>
+    <script src="{{ url_for('static', filename='Chart.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='luxon.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='chartjs-adapter-luxon@1.js') }}"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .chart-container {
+            position: relative;
+            height: 600px;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            gap: 10px;
+        }
+        select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255,255,255,0.8);
+            font-size: 24px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Pile Data Visualization</h1>
+        
+        <div class="controls">
+            <select id="y-axis-select">
+                <option value="tonnage" selected>Tonnage</option>
+                <option value="volume_odm">Volume ODM</option>
+                <option value="volume_total">Volume Total</option>
+            </select>
+            <button id="refresh-btn">Refresh Data</button>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="chart"></canvas>
+            <div id="loading" class="loading">Loading data...</div>
+        </div>
+    </div>
+
+    <script>
+        // Chart configuration
+        let chartInstance = null;
+        const ctx = document.getElementById('chart').getContext('2d');
+        const yAxisSelect = document.getElementById('y-axis-select');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const loadingElement = document.getElementById('loading');
+        
+        // Generate random color for each dataset
+        function getRandomColor() {
+            const r = Math.floor(Math.random() * 255);
+            const g = Math.floor(Math.random() * 255);
+            const b = Math.floor(Math.random() * 255);
+            return `rgba(${r}, ${g}, ${b}, 1)`;
+        }
+        
+        // Fetch data from API and update chart
+        async function fetchDataAndUpdateChart(yAxis) {
+            try {
+                loadingElement.style.display = 'flex';
+                
+                const response = await fetch(`/api/data/${yAxis}`);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                
+                const data = await response.json();
+                
+                // Add colors to datasets
+                data.forEach(dataset => {
+                    const color = getRandomColor();
+                    dataset.borderColor = color;
+                    dataset.backgroundColor = color.replace('1', '0.1');
+                });
+                
+                // Create or update chart
+                if (chartInstance) {
+                    chartInstance.destroy();
+                }
+                
+                console.log(data);
+
+                chartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: data
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: `${yAxis.charAt(0).toUpperCase() + yAxis.slice(1)} progression per Pile`,
+                                font: {
+                                    size: 18
+                                }
+                            },
+                            tooltip: {
+                                enabled: true
+                            },
+                            legend: {
+                                position: 'top',
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'day',
+                                    displayFormats: {
+                                        day: 'MMM dd'
+                                    },
+                                    tooltipFormat: 'MMM dd, yyyy'
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Flight Day'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: yAxis.charAt(0).toUpperCase() + yAxis.slice(1)
+                                },
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                alert('Failed to load data. See console for details.');
+            } finally {
+                loadingElement.style.display = 'none';
+            }
+        }
+        
+        // Event listeners
+        refreshBtn.addEventListener('click', () => {
+            const selectedYAxis = yAxisSelect.value;
+            fetchDataAndUpdateChart(selectedYAxis);
+        });
+        
+        yAxisSelect.addEventListener('change', () => {
+            const selectedYAxis = yAxisSelect.value;
+            fetchDataAndUpdateChart(selectedYAxis);
+        });
+        
+        // Initial data load
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchDataAndUpdateChart('tonnage');
+        });
+    </script>
+</body>
+</html>
