@@ -11,7 +11,7 @@ sns.set_theme()
 class DataFrameConstructor:
 
     def __init__(self, y_axis='tonnage'):
-        self.url: str = 'http://10.28.100.183:3000/get/all/scraps/blv_weekly'
+        self.url: str = 'http://localhost:3000/get/all/scraps/blv_weekly'
         self.header: dict = {'Authorization': 'xeXRK2RPc5dZLTPp2z2s4eAhfMH01bOaIZsqxbTzys12dL65e8KvKvszlalaoxOZaMhJyPGTECSSRc2j7VkZdGeJZm5Ypu02pdSoxbrxzY875vugEQ5x3aVeQu2UTAcIDwWdrgaWzuzE8u3RUz6igD'}
         self.y_axis: str = y_axis # tonnage, volume_odm, volume_total ...
         self.data: Response = None
